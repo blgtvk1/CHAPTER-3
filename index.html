@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LexiaBuddy</title>
+
+  <!-- Google Fonts: Lexend -->
+  <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+  <!-- pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+  <style>
+    /* ── CSS Variables ─────────────────────────────────────── */
+    :root {
+      --orange:        #F97316;
+      --orange-pale:   #FDBA74;
+      --orange-light:  #FFF7ED;
+      --orange-hover:  #EA6C06;
+      --black:         #1A1A1A;
+      --gray-bg:       rgb(230, 230, 230);
+      --gray-disabled: #9CA3AF;
+      --white:         #FFFFFF;
+      --shadow:        0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.07);
+      --radius:        16px;
+      --border:        1px solid #1A1A1A;
+      --transition:    all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── Reset & Base ──────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lexend', sans-serif;
+      background: var(--gray-bg);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 0 60px 0;
+    }
+
+    /* ── Box 0 — Top Bar ───────────────────────────────────── */
+    #box-0 {
+      width: 100%;
+      background: var(--gray-bg);
+      border-bottom: var(--border);
+      box-shadow: var(--shadow);
+      padding: 22px 0 20px;
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      animation: fadeDown 0.5s ease both;
+    }
+
+    #box-0 h1 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1;
+    }
+
+    #box-0 h1 .lexia { color: var(--orange); }
+    #box-0 h1 .buddy { color: var(--black); }
+
+    /* ── Main content wrapper ──────────────────────────────── */
+    .main {
+      width: 100%;
+      max-width: 680px;
+      padding: 48px 24px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* ── Shared box style ──────────────────────────────────── */
+    .card {
+      background: var(--gray-bg);
+      border: var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    /* ── Box 1 — Upload Area ───────────────────────────────── */
+    #box-1 {
+      padding: 0;
+      cursor: pointer;
+      transition: var(--transition);
+      animation: fadeUp 0.5s 0.1s ease both;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #box-1:hover  { box-shadow: 0 8px 28px rgba(249,115,22,0.15), 0 2px 8px rgba(0,0,0,0.08); }
+    #box-1.drag-over {
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.25);
+      background: var(--orange-light);
+    }
+    #box-1.has-file {
+      border-color: var(--orange);
+      background: var(--orange-light);
+    }
+
+    #upload-inner {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 48px 32px;
+      text-align: center;
+      min-height: 160px;
+    }
+
+    #upload-icon {
+      width: 52px;
+      height: 52px;
+      color: var(--orange-pale);
+      transition: var(--transition);
+    }
+    #box-1:hover #upload-icon,
+    #box-1.drag-over #upload-icon { color: var(--orange); transform: translateY(-3px); }
+    #box-1.has-file #upload-icon  { color: var(--orange); }
+
+    #upload-label {
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--orange-pale);
+      transition: var(--transition);
+    }
+    #box-1.has-file #upload-label  { color: var(--orange); }
+    #box-1.drag-over #upload-label { color: var(--orange); }
+
+    #upload-hint {
+      font-size: 13px;
+      color: #BDBDBD;
+      font-weight: 300;
+    }
+    #box-1.has-file #upload-hint { display: none; }
+
+    #file-name-display {
+      display: none;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--orange-hover);
+      background: rgba(249,115,22,0.08);
+      padding: 6px 16px;
+      border-radius: 999px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #box-1.has-file #file-name-display { display: block; }
+
+    #upload-error {
+      display: none;
+      font-size: 13px;
+      color: #DC2626;
+      font-weight: 400;
+      margin-top: -6px;
+    }
+
+    /* hidden real input */
+    #file-input { display: none; }
+
+    /* ── Box 2 — Convert Button ────────────────────────────── */
+    #box-2 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeUp 0.5s 0.2s ease both;
+      padding: 0;
+      border: none;
+      background: transparent;
+      box-shadow: none;
+    }
+
+    #convert-btn {
+      font-family: 'Lexend', sans-serif;
+      font-size: 18px;
+      font-weight: 600;
+      width: 100%;
+      padding: 20px 32px;
+      border-radius: var(--radius);
+      border: var(--border);
+      cursor: not-allowed;
+      color: var(--gray-disabled);
+      background: var(--gray-bg);
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+      letter-spacing: 0.3px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #convert-btn.active {
+      color: var(--orange);
+      cursor: pointer;
+      border-color: var(--black);
+    }
+    #convert-btn.active:hover {
+      background: var(--orange-light);
+      box-shadow: 0 8px 28px rgba(249,115,22,0.18), 0 2px 8px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+    #convert-btn.active:active { transform: translateY(0); }
+
+    #convert-btn.loading {
+      color: var(--gray-disabled);
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* ── Box 3 — Result Area ───────────────────────────────── */
+    #box-3 {
+      min-height: 120px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 36px 32px;
+      animation: fadeUp 0.5s 0.3s ease both;
+      transition: var(--transition);
+    }
+
+    /* Empty state */
+    #result-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      color: #C0C0C0;
+      font-size: 15px;
+      font-weight: 300;
+    }
+    #result-empty svg { color: #D1D5DB; }
+
+    /* Spinner */
+    #result-loading {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid rgba(249,115,22,0.2);
+      border-top-color: var(--orange);
+      border-radius: 50%;
+      animation: spin 0.85s linear infinite;
+    }
+    #result-loading p {
+      font-size: 15px;
+      color: #888;
+      font-weight: 300;
+    }
+
+    /* Ready state */
+    #result-ready {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+      text-align: center;
+      width: 100%;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    #result-ready .ready-title {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--black);
+    }
+
+    #result-ready .file-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(249,115,22,0.07);
+      border: 1px solid rgba(249,115,22,0.2);
+      border-radius: 12px;
+      padding: 12px 20px;
+      width: 100%;
+      flex-wrap: wrap;
+      justify-content: space-between;
+    }
+
+    #result-ready .result-filename {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--black);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 320px;
+      flex: 1;
+    }
+
+    #download-btn {
+      font-family: 'Lexend', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--white);
+      background: var(--orange);
+      border: none;
+      border-radius: 8px;
+      padding: 10px 22px;
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    #download-btn:hover {
+      background: var(--orange-hover);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(249,115,22,0.35);
+    }
+
+    /* Error state */
+    #result-error {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+    #result-error p {
+      font-size: 15px;
+      color: #DC2626;
+      font-weight: 400;
+    }
+    #result-error button {
+      font-family: 'Lexend', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--orange);
+      background: none;
+      border: 1px solid var(--orange);
+      border-radius: 8px;
+      padding: 7px 18px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    #result-error button:hover { background: var(--orange-light); }
+
+    /* ── Animations ────────────────────────────────────────── */
+    @keyframes spin     { to { transform: rotate(360deg); } }
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-12px);} to { opacity:1; transform:translateY(0);} }
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0);} }
+  </style>
+</head>
+<body>
+
+  <!-- ── Box 0: Top Bar ───────────────────────────────────── -->
+  <header id="box-0">
+    <h1><span class="lexia">Lexia</span><span class="buddy">Buddy</span></h1>
+  </header>
+
+  <main class="main">
+
+    <!-- ── Box 1: Upload Area ─────────────────────────────── -->
+    <div id="box-1" class="card" role="button" tabindex="0" aria-label="Upload PDF area">
+      <div id="upload-inner">
+        <!-- Upload icon -->
+        <svg id="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2"/>
+          <polyline points="16 8 12 4 8 8"/>
+          <line x1="12" y1="4" x2="12" y2="16"/>
+        </svg>
+
+        <span id="upload-label">Upload Your PDF…</span>
+        <span id="upload-hint">Drag &amp; drop or click to browse — PDF files only</span>
+        <span id="file-name-display"></span>
+        <span id="upload-error"></span>
+      </div>
+      <input type="file" id="file-input" accept=".pdf,application/pdf" />
+    </div>
+
+    <!-- ── Box 2: Convert Button ──────────────────────────── -->
+    <div id="box-2">
+      <button id="convert-btn" disabled>Convert</button>
+    </div>
+
+    <!-- ── Box 3: Result Area ─────────────────────────────── -->
+    <div id="box-3" class="card">
+
+      <!-- Empty -->
+      <div id="result-empty">
+        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <span>Your converted PDF will appear here</span>
+      </div>
+
+      <!-- Loading -->
+      <div id="result-loading">
+        <div class="spinner"></div>
+        <p>Simplifying your document…</p>
+      </div>
+
+      <!-- Ready -->
+      <div id="result-ready">
+        <span class="ready-title">Your PDF is ready.</span>
+        <div class="file-row">
+          <span class="result-filename" id="result-filename"></span>
+          <button id="download-btn">⬇ Download</button>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div id="result-error">
+        <p id="error-message">Something went wrong. Please try again.</p>
+        <button onclick="resetApp()">Try Again</button>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ══════════════════════════════════════════════════════════
+       JAVASCRIPT
+  ══════════════════════════════════════════════════════════ -->
+  <script>
+    // ── CONFIG ────────────────────────────────────────────────
+    const GROQ_API_KEY = ""; 
+    const GROQ_MODEL   = "openai/gpt-oss-120b";
+    const GROQ_URL     = "https://api.groq.com/openai/v1/chat/completions";
+    const MAX_TOKENS   = 65536;
+
+    // pdf.js worker
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+    // ── STATE ─────────────────────────────────────────────────
+    let uploadedFile   = null;
+    let pdfBlobUrl     = null;
+    let outputFilename = "";
+
+    // ── DOM REFS ──────────────────────────────────────────────
+    const box1          = document.getElementById("box-1");
+    const fileInput     = document.getElementById("file-input");
+    const uploadLabel   = document.getElementById("upload-label");
+    const fileNameDisp  = document.getElementById("file-name-display");
+    const uploadError   = document.getElementById("upload-error");
+    const convertBtn    = document.getElementById("convert-btn");
+    const resultEmpty   = document.getElementById("result-empty");
+    const resultLoading = document.getElementById("result-loading");
+    const resultReady   = document.getElementById("result-ready");
+    const resultError   = document.getElementById("result-error");
+    const errorMessage  = document.getElementById("error-message");
+    const resultFname   = document.getElementById("result-filename");
+    const downloadBtn   = document.getElementById("download-btn");
+
+    // ── HELPERS: show/hide result states ─────────────────────
+    function showState(state) {
+      resultEmpty.style.display   = state === "empty"   ? "flex" : "none";
+      resultLoading.style.display = state === "loading" ? "flex" : "none";
+      resultReady.style.display   = state === "ready"   ? "flex" : "none";
+      resultError.style.display   = state === "error"   ? "flex" : "none";
+    }
+
+    // ── FILE VALIDATION ───────────────────────────────────────
+    function handleFile(file) {
+      uploadError.style.display = "none";
+      uploadError.textContent   = "";
+
+      if (!file) return;
+
+      const isPDF = file.type === "application/pdf" ||
+                    file.name.toLowerCase().endsWith(".pdf");
+
+      if (!isPDF) {
+        uploadError.textContent   = "Please upload a PDF file.";
+        uploadError.style.display = "block";
+        box1.classList.remove("has-file");
+        uploadedFile = null;
+        setConvertActive(false);
+        return;
+      }
+
+      uploadedFile = file;
+      fileNameDisp.textContent = file.name;
+      uploadLabel.textContent  = "PDF selected";
+      box1.classList.add("has-file");
+      setConvertActive(true);
+      showState("empty");
+    }
+
+    function setConvertActive(active) {
+      if (active) {
+        convertBtn.classList.add("active");
+        convertBtn.disabled = false;
+      } else {
+        convertBtn.classList.remove("active");
+        convertBtn.disabled = true;
+      }
+    }
+
+    // ── BOX 1: click to open file picker ─────────────────────
+    box1.addEventListener("click", () => fileInput.click());
+    box1.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") fileInput.click(); });
+    fileInput.addEventListener("change", e => handleFile(e.target.files[0]));
+
+    // ── BOX 1: drag & drop ────────────────────────────────────
+    box1.addEventListener("dragover", e => {
+      e.preventDefault();
+      box1.classList.add("drag-over");
+    });
+    box1.addEventListener("dragleave", () => box1.classList.remove("drag-over"));
+    box1.addEventListener("drop", e => {
+      e.preventDefault();
+      box1.classList.remove("drag-over");
+      const file = e.dataTransfer.files[0];
+      handleFile(file);
+    });
+
+    // ── STEP 1: Extract text from PDF (pdf.js) ─────────────────
+    async function extractTextFromPDF(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+      let fullText = "";
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page    = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const items   = content.items;
+
+        let pageText = "";
+        for (let j = 0; j < items.length; j++) {
+          const item = items[j];
+          const str  = item.str;
+
+          if (!str) continue;
+
+          // Detect line breaks: if hasEOL flag or next item has large Y gap
+          const isEOL = item.hasEOL;
+          const nextItem = items[j + 1];
+          const yGap = nextItem
+            ? Math.abs((item.transform[5]) - (nextItem.transform[5]))
+            : 0;
+
+          // Add the word/token
+          pageText += str;
+
+          if (isEOL || yGap > 5) {
+            // Large gap = new paragraph; small gap = new line within paragraph
+            pageText += yGap > 20 ? "\n\n" : " ";
+          } else {
+            // Same line — ensure exactly one space between tokens
+            const endsWithSpace   = str.endsWith(" ");
+            const nextStartsSpace = nextItem && nextItem.str.startsWith(" ");
+            if (!endsWithSpace && !nextStartsSpace && nextItem) {
+              pageText += " ";
+            }
+          }
+        }
+
+        fullText += pageText.trim() + "\n\n";
+      }
+
+      // Collapse multiple spaces into one, keep paragraph breaks
+      fullText = fullText
+        .replace(/[ \t]+/g, " ")          // multiple spaces → one space
+        .replace(/\n{3,}/g, "\n\n")        // 3+ newlines → double newline
+        .trim();
+
+      if (!fullText) {
+        throw new Error("This PDF contains no readable text. Please try a text-based PDF.");
+      }
+      return fullText;
+    }
+
+    // ── STEP 2: Simplify with Groq ────────────────────────────
+    async function simplifyWithGroq(extractedText) {
+      const prompt = `You are a text simplification assistant for children with dyslexia.
+
+Your ONLY job is to rewrite the text I give you. Do NOT summarize, do NOT skip content, do NOT add new information.
+
+Rewrite rules:
+- Replace complex or uncommon words with simple, everyday alternatives
+- Break long sentences into short ones (maximum 15 words per sentence)
+- Split paragraphs at natural, grammatically correct points in the language of the text — never cut a sentence in half
+- Each paragraph should express only one idea
+- Keep a blank line between every paragraph
+- Use bullet points or numbered lists where it helps clarity
+- Keep all the original information and meaning
+- Keep the same logical order as the original text
+- Do not add titles, headers, or section labels unless they already exist in the original
+- Do not include any explanation, preamble, or closing note — output ONLY the rewritten text
+- Preserve the original language of the text exactly (if the text is in Turkish, write in Turkish; if English, write in English)
+
+The reader is a child with dyslexia. Write as simply and clearly as possible.
+
+Here is the text to rewrite:
+
+${extractedText}`;
+
+      const response = await fetch(GROQ_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${GROQ_API_KEY}`,
+          "Content-Type":  "application/json"
+        },
+        body: JSON.stringify({
+          model:      GROQ_MODEL,
+          max_tokens: MAX_TOKENS,
+          messages:   [{ role: "user", content: prompt }]
+        })
+      });
+
+      if (!response.ok) {
+        const err = await response.text();
+        throw new Error("Groq API error: " + err);
+      }
+
+      const data = await response.json();
+      const text = data?.choices?.[0]?.message?.content?.trim();
+      if (!text) throw new Error("The AI returned an empty response. Please try again.");
+      return text;
+    }
+
+    // ── STEP 3: Generate printable HTML page (Lexend + Turkish) ──
+    // jsPDF cannot embed Google Fonts or handle Turkish chars reliably.
+    // Instead we open a styled print window — the user saves it as PDF
+    // via the browser's built-in "Save as PDF" print destination.
+    function generatePDF(simplifiedText, originalFilename) {
+      outputFilename = originalFilename.replace(/\.pdf$/i, "") + "_lexiabuddy.pdf";
+
+      // Convert plain text to HTML paragraphs
+      // Split on blank lines to respect paragraph structure
+      const paragraphs = simplifiedText
+        .split(/\n{2,}/)
+        .map(p => p.trim())
+        .filter(p => p.length > 0)
+        .map(p => {
+          // Handle bullet lines inside a paragraph
+          const lines = p.split("\n").map(line => {
+            line = line.trim();
+            if (/^[-•*]\s+/.test(line)) {
+              return `<li>${line.replace(/^[-•*]\s+/, "")}</li>`;
+            }
+            if (/^\d+\.\s+/.test(line)) {
+              return `<li>${line.replace(/^\d+\.\s+/, "")}</li>`;
+            }
+            return line;
+          });
+
+          const hasListItems = lines.some(l => l.startsWith("<li>"));
+          if (hasListItems) {
+            return `<ul>${lines.join("")}</ul>`;
+          }
+          return `<p>${lines.join("<br>")}</p>`;
+        })
+        .join("\n");
+
+      const printHTML = `<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>${outputFilename}</title>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Lexend', sans-serif;
+    font-size: 18px;
+    line-height: 1.9;
+    color: #000;
+    background: #fff;
+    padding: 25mm 20mm;
+    max-width: 210mm;
+    margin: 0 auto;
+  }
+  p  { margin-bottom: 1.4em; }
+  ul { margin-bottom: 1.4em; padding-left: 1.6em; }
+  li { margin-bottom: 0.5em; }
+  @media print {
+    body { padding: 15mm 15mm; }
+    @page { size: A4; margin: 15mm; }
+  }
+</style>
+</head>
+<body>
+${paragraphs}
+<script>
+  // Wait for Lexend to load, then open print dialog
+  document.fonts.ready.then(() => {
+    setTimeout(() => { window.print(); }, 400);
+  });
+<\/script>
+</body>
+</html>`;
+
+      // Open in new tab — user prints/saves as PDF from there
+      const blob    = new Blob([printHTML], { type: "text/html;charset=utf-8" });
+      if (pdfBlobUrl) URL.revokeObjectURL(pdfBlobUrl);
+      pdfBlobUrl = URL.createObjectURL(blob);
+
+      return { blobUrl: pdfBlobUrl, filename: outputFilename };
+    }
+
+    // ── CONVERT: main pipeline ────────────────────────────────
+    convertBtn.addEventListener("click", async () => {
+      if (!uploadedFile) return;
+
+      // Lock UI
+      setConvertActive(false);
+      convertBtn.classList.add("loading");
+      showState("loading");
+
+      try {
+        // 1. Extract text
+        const rawText = await extractTextFromPDF(uploadedFile);
+
+        // 2. Simplify
+        const simplified = await simplifyWithGroq(rawText);
+
+        // 3. Generate PDF
+        const { blobUrl, filename } = await generatePDF(simplified, uploadedFile.name);
+
+        // 4. Show result
+        resultFname.textContent = filename;
+        downloadBtn.onclick = () => {
+          const printWindow = window.open(blobUrl, "_blank");
+          if (!printWindow) {
+            alert("Lütfen pop-up engelleyiciyi kapatın ve tekrar deneyin.");
+          }
+        };
+        downloadBtn.textContent = "⬇ Save as PDF";
+        showState("ready");
+
+      } catch (err) {
+        console.error(err);
+        errorMessage.textContent = err.message || "Something went wrong. Please try again.";
+        showState("error");
+      } finally {
+        convertBtn.classList.remove("loading");
+        setConvertActive(true);
+      }
+    });
+
+    // ── RESET ─────────────────────────────────────────────────
+    function resetApp() {
+      uploadedFile = null;
+      fileInput.value = "";
+      box1.classList.remove("has-file", "drag-over");
+      uploadLabel.textContent   = "Upload Your PDF…";
+      fileNameDisp.textContent  = "";
+      uploadError.style.display = "none";
+      setConvertActive(false);
+      showState("empty");
+      if (pdfBlobUrl) { URL.revokeObjectURL(pdfBlobUrl); pdfBlobUrl = null; }
+    }
+  </script>
+
+</body>
+</html>
